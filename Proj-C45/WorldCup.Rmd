@@ -1,0 +1,83 @@
+---
+title: "WorlCup"
+author: "Parsa Moghaddam"
+date: '2023-04-01'
+output: html_document
+---
+
+```{r, include=FALSE, warning=FALSE}
+library(readxl)
+library(dplyr)
+library(corrplot)
+library(tidyverse)
+```
+
+
+
+
+# Reading Data
+
+```{r}
+C45 <- read_excel("data.xlsx")
+```
+
+
+# First model
+
+```{r}
+model4 <- lm( Rating ~  Gls...11 + Ast...12 + factor(Squad)-1, data = C45)
+summary(model4)
+```
+
+```{r}
+fe_coefs5 <- summary(model4)$coefficients
+fe_coefs5 <- as.data.frame(fe_coefs5)
+fe_coefs5[order(fe_coefs5$Estimate, decreasing = TRUE),]
+```
+
+
+# Using Starts vs Mins played for a variable
+
+```{r}
+C45$SM = 0
+
+for(i in 1:126){
+  C45$SM[i] = (C45$Starts[i] / C45$MP[i])
+}
+
+```
+
+
+
+# Fitiing new model
+
+```{r}
+model5 <- lm( Rating ~  Gls...11 + Ast...12 + SM + factor(Squad)-1, data = C45)
+summary(model5)
+```
+
+
+```{r}
+fe_coefs5 <- summary(model5)$coefficients
+fe_coefs5 <- as.data.frame(fe_coefs5)
+fe_coefs5[order(fe_coefs5$Estimate, decreasing = TRUE),]
+```
+
+
+
+
+
+# Lets check Messi and Ronaldo rating
+
+```{r}
+predict(model5)
+```
+
+# Messi is 91.73 and Ronaldo is 86.97!
+
+
+
+
+
+
+

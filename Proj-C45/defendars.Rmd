@@ -1,0 +1,368 @@
+---
+title: "Defendars"
+author: "Parsa Moghaddam"
+date: '2023-04-01'
+output: html_document
+---
+
+```{r, include=FALSE, warning=FALSE}
+library(readxl)
+library(dplyr)
+library(corrplot)
+library(tidyverse)
+```
+
+# Reading Data
+
+```{r}
+fifa2023 <- read.csv("fifa2023.csv")
+EN2022 <- read.csv("2021-2022_EN.csv")
+SP2022 <- read.csv("2021-2022_SP.csv")
+IT2022 <- read.csv("2021-2022_IT.csv")
+FR2022 <- read.csv("2021-2022_FR.csv")
+GE2022 <- read.csv("2021-2022_GE.csv")
+```
+
+
+
+
+```{r}
+fifa2023 <- fifa2023[c("Known.As", "Full.Name", "Overall", "Nationality")]
+
+fifa2023 <- fifa2023 %>% 
+    rename (
+        name = Full.Name
+    )
+
+dfAll <- rbind(EN2022, SP2022, IT2022, FR2022, GE2022)
+
+dfAll <- dfAll %>%
+    rename(
+        name = Player
+    )
+
+merged <- merge(fifa2023, dfAll, by = "name")
+merged$Squad <- factor(merged$Squad)
+merged$League <- factor(merged$League)
+```
+
+
+# Defendars Data
+
+```{r}
+defendars <- merged[merged$Pos == "DF", ]
+defendars2 <- merged %>% filter(Pos == "DF", )
+
+defendars$SM = 0
+
+for(i in 1:588){
+  defendars$SM[i] = (defendars2$Starts[i] / defendars2$MP[i])
+}
+
+# Players tackled percent
+defendars$TKWON = 0
+
+for(i in 1:588){
+  defendars$TKWON[i] = (defendars2$TklW[i] / defendars2$Tkl[i])
+}
+
+#Dribbles TAckled percent
+defendars$TKCWON = (defendars$Tkl./100)
+```
+
+
+# Simple Model W/O SM
+
+```{r}
+simple <- lm(Overall ~ Ast + TKCWON + Blocks , data = defendars)
+summary(simple)
+```
+
+#Simple Model with SM
+
+```{r}
+simple <- lm(Overall ~ Ast + TKCWON + Blocks + SM, data = defendars)
+summary(simple)
+```
+
+#Simple Model with SM and Astper90
+
+```{r}
+simple2 <- lm(Overall ~ Ast_per90 + TKCWON + Blocks + SM, data = defendars)
+summary(simple2)
+```
+
+
+
+
+
+# fixed effect for Squad w/o SM
+
+```{r}
+m1 <- lm(Overall ~  Ast + TKCWON + Blocks + Squad-1, data = defendars)
+summary(m1)
+```
+
+# fixed effect for Squad with SM
+
+```{r}
+m1 <- lm(Overall ~  Ast + TKCWON + Blocks + SM + Squad-1, data = defendars)
+summary(m1)
+```
+
+
+
+```{r}
+fe_coefs4 <- summary(m1)$coefficients
+fe_coefs4 <- as.data.frame(fe_coefs4)
+fe_coefs4[order(fe_coefs4$Estimate, decreasing = TRUE),]
+```
+
+
+```{r}
+model1 <- lm(Overall ~  Ast_per90 + TKCWON + Blocks + SM + Squad-1, data = defendars)
+summary(model1)
+```
+
+
+
+```{r}
+fe_coefs4 <- summary(model1)$coefficients
+fe_coefs4 <- as.data.frame(fe_coefs4)
+fe_coefs4[order(fe_coefs4$Estimate, decreasing = TRUE),]
+```
+
+
+
+
+
+# fixed effect for League w/o SM
+
+```{r}
+m2 <- lm(Overall ~ Ast + TKCWON + Blocks + League-1, data = defendars)
+summary(m2)
+```
+
+
+# fixed effect for League with SM
+
+```{r}
+m2 <- lm(Overall ~ Ast + TKCWON + Blocks + SM + League-1, data = defendars)
+summary(m2)
+```
+
+
+```{r}
+fe_coefs4 <- summary(m2)$coefficients
+fe_coefs4 <- as.data.frame(fe_coefs4)
+fe_coefs4[order(fe_coefs4$Estimate, decreasing = TRUE),]
+```
+
+
+```{r}
+model2 <- lm(Overall ~ Ast_per90 + TKCWON + Blocks + SM + League-1, data = defendars)
+summary(model2)
+```
+
+
+```{r}
+fe_coefs4 <- summary(model2)$coefficients
+fe_coefs4 <- as.data.frame(fe_coefs4)
+fe_coefs4[order(fe_coefs4$Estimate, decreasing = TRUE),]
+```
+
+
+
+
+
+
+
+# Fixed Effects for League and Club w/o SM
+
+```{r}
+m3_1 <- lm(Overall ~ TKCWON + Blocks + Ast + League-1 + Squad-1, data = defendars)
+summary(m3_1)
+```
+
+
+# Fixed Effects for League and Club with SM
+
+```{r}
+m3 <- lm(Overall ~ Ast + TKCWON + Blocks + SM + League-1 + Squad-1, data = defendars)
+summary(m3)
+```
+
+
+```{r}
+fe_coefs4 <- summary(m3)$coefficients
+fe_coefs4 <- as.data.frame(fe_coefs4)
+fe_coefs4[order(fe_coefs4$Estimate, decreasing = TRUE),]
+```
+
+
+# FINAL MODEL
+
+```{r}
+model3 <- lm(Overall ~ Ast_per90 + TKCWON + Blocks + SM + League-1 + Squad-1, data = defendars)
+summary(model3)
+```
+
+
+
+```{r}
+fe_coefs4 <- summary(model3)$coefficients
+fe_coefs4 <- as.data.frame(fe_coefs4)
+fe_coefs4[order(fe_coefs4$Estimate, decreasing = TRUE),]
+```
+
+
+```{r}
+which(predict(model3) > 87)
+max(model3$fitted.values)
+```
+
+
+```{r}
+model33 <- lm(Overall ~  TKCWON + Blocks + SM + League-1 + Squad-1, data = defendars)
+summary(model33)
+```
+
+```{r}
+which(predict(model33) > 86)
+max(model33$fitted.values)
+```
+
+
+#Model using tackle instead of tackle percentage won!
+
+```{r}
+m3_2 <- lm(Overall ~ Tkl + Blocks + SM + Ast + League-1 + Squad-1, data = defendars)
+summary(m3_2)
+```
+
+
+#Model using tackle instead of tackle percentage won and no SM / Assist!
+
+```{r}
+m3_3 <- lm(Overall ~ Tkl + Blocks + League-1 + Squad-1, data = defendars)
+summary(m3_3)
+```
+
+
+
+
+#Model using tackle instead of tackle percentage won and no assist!
+
+```{r}
+m10 <- lm(Overall ~ Tkl + Blocks + SM + League-1 + Squad-1, data = defendars)
+summary(m10)
+```
+
+
+
+```{r}
+#model with tackle + no SM
+hist(predict(m3_3), main="Rating Distribution", xlab="Rating")
+
+#model with tackle perc + SM
+hist(predict(model3), main = "Rating Distribution", xlab = "Rating")
+```
+
+
+
+
+```{r}
+#model with tackle + no Assist
+hist(predict(m10), main="Rating Distribution", xlab="Rating")
+
+#model with tackle perc + SM
+hist(predict(m3), main = "Rating Distribution", xlab = "Rating")
+```
+
+
+```{r}
+#model with tackle + no Assist
+hist(predict(m10), main="Rating Distribution", xlab="Rating")
+
+#model with tackle perc + SM
+hist(predict(model3), main = "Rating Distribution", xlab = "Rating")
+```
+
+
+# HEREEEEEEEE
+
+```{r}
+#Model with tackles
+plot(m3_3$residuals ~ m3_3$fitted.values, xlab = "Predicted Ratings", ylab = "Residual", data = defendars)
+abline(h = 0)
+
+#model with tackle perc + SM
+plot(model3$residuals ~ model3$fitted.values, xlab = "Predicted Ratings", ylab = "Residual", data = defendars)
+abline(h = 0)
+
+```
+
+
+
+
+
+
+
+
+
+
+```{r}
+#Model with tackles
+plot(m3_3$residuals ~ m3_3$fitted.values, xlab = "Predicted Ratings", ylab = "Residual", data = defendars)
+abline(h = 0)
+
+#model with tackle perc + SM
+plot(m3$residuals ~ m3$fitted.values, xlab = "Predicted Ratings", ylab = "Residual", data = defendars)
+abline(h = 0)
+
+```
+
+
+
+
+```{r}
+plot(predict(m3_3),
+    defendars$Overall,
+    xlab = "Predicted Values",
+    ylab = "Observed Values"
+)
+abline(
+    a = 0,
+    b = 1,
+    col = "red",
+    lwd = 2
+)
+```
+
+
+# Full model (same length)
+
+```{r}
+#m3_3 <- lm(Overall ~ Tkl + Blocks + League-1 + Squad-1, data = defendars)
+
+fit <- lm(Overall ~ Ast_per90 + (defendars$TklW / defendars$Tkl) + (defendars$Starts / defendars$MP) + Blocks + League-1 + Squad-1, data = defendars)
+length(fit$fitted.values)
+```
+
+
+```{r}
+plot(predict(fit),
+    defendars$Overall,
+    xlab = "Predicted Values",
+    ylab = "Observed Values"
+)
+abline(
+    a = 0,
+    b = 1,
+    col = "red",
+    lwd = 2
+)
+```
+
+
+

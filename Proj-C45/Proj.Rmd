@@ -1,0 +1,418 @@
+---
+title: "c45Project"
+author: "Parsa Moghaddam"
+date: '2023-03-24'
+output: html_document
+---
+
+
+```{r}
+library(readxl)
+library(dplyr)
+library(corrplot)
+library(tidyverse)
+```
+
+
+
+```{r}
+fifa2023 <- read.csv("fifa2023.csv")
+EN2022 <- read.csv("2021-2022_EN.csv")
+SP2022 <- read.csv("2021-2022_SP.csv")
+IT2022 <- read.csv("2021-2022_IT.csv")
+FR2022 <- read.csv("2021-2022_FR.csv")
+GE2022 <- read.csv("2021-2022_GE.csv")
+```
+
+
+
+
+```{r}
+fifa2023 <- fifa2023[c("Known.As", "Full.Name", "Overall", "Nationality")]
+
+fifa2023 <- fifa2023 %>% 
+    rename (
+        name = Full.Name
+    )
+
+dfAll <- rbind(EN2022, SP2022, IT2022, FR2022, GE2022)
+
+dfAll <- dfAll %>%
+    rename(
+        name = Player
+    )
+```
+
+
+```{r}
+merged <- merge(fifa2023, dfAll, by = "name")
+merged$Squad <- factor(merged$Squad)
+merged$League <- factor(merged$League)
+```
+
+
+
+```{r}
+forwards <- merged[merged$Pos == "FW" | merged$Pos == "FWMF" | merged$Pos == "MFFW", ]
+forwards2 <- merged %>% filter(Pos == "FW" | merged$Pos == "FWMF" | merged$Pos == "MFFW", )
+```
+
+
+```{r}
+lm.fit <- lm(Overall ~ Gls+Ast, data = forwards2)
+summary(lm.fit)
+```
+
+
+
+
+
+
+```{r}
+fe_lm.fit <- lm(Overall ~ Gls + Ast + xG + Min + Squad-1, data = forwards2)
+summary(fe_lm.fit)
+```
+
+
+
+
+```{r}
+fe_coefs <- summary(fe_lm.fit)$coefficients
+fe_coefs <- as.data.frame(fe_coefs)
+fe_coefs[order(fe_coefs$Estimate, decreasing = TRUE), ]
+```
+
+
+
+```{r}
+fe_lm.fit2 <- lm(Overall ~ Gls + Ast + xG + Min + League-1, data = forwards2)
+summary(fe_lm.fit2)
+```
+
+
+```{r}
+forwards2$SM = 0
+
+for(i in 1:616){
+  forwards2$SM[i] = (forwards2$Starts[i] / forwards2$MP[i])
+}
+
+fe <- lm(Overall ~ Gls + Ast + xG  + Min + SM + League-1 + Squad-1, data = forwards2)
+summary(fe)
+```
+
+
+
+
+
+
+
+
+
+```{r}
+fe <- summary(fe)$coefficients
+fe <- as.data.frame(fe)
+fe[order(fe$Estimate, decreasing = TRUE),]
+```
+
+
+# Benzema is highest rated attacker with rating of 95!
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Defendars:
+
+```{r}
+defendars <- merged[merged$Pos == "DF", ]
+defendars2 <- merged %>% filter(Pos == "DF", )
+
+defendars$SM = 0
+
+for(i in 1:587){
+  defendars$SM[i] = (defendars2$Starts[i] / defendars2$MP[i])
+}
+
+# Players tackled percent
+defendars$TKWON = 0
+
+for(i in 1:587){
+  defendars$TKWON[i] = (defendars2$TklW[i] / defendars2$Tkl[i])
+}
+
+#Dribbles TAckled percent
+defendars$TKCWON = (defendars$Tkl./100)
+```
+
+
+
+
+
+
+
+
+# Simple Model W/O SM
+
+```{r}
+simple <- lm(Overall ~ Ast + TKCWON + Blocks , data = defendars)
+summary(simple)
+```
+
+
+
+#Simple Model with SM
+
+```{r}
+simple <- lm(Overall ~ Ast + TKCWON + Blocks + SM, data = defendars)
+summary(simple)
+```
+
+
+
+
+# fixed effect for Squad w/o SM
+
+```{r}
+m1 <- lm(Overall ~  Ast + TKCWON + Blocks + Squad-1, data = defendars)
+summary(m1)
+```
+
+# fixed effect for Squad with SM
+
+```{r}
+m1 <- lm(Overall ~  Ast + TKCWON + Blocks + SM + Squad-1, data = defendars)
+summary(m1)
+```
+
+
+```{r}
+fe_coefs4 <- summary(m1)$coefficients
+fe_coefs4 <- as.data.frame(fe_coefs4)
+fe_coefs4[order(fe_coefs4$Estimate, decreasing = TRUE),]
+```
+
+
+
+
+# fixed effect for League w/o SM
+
+```{r}
+m2 <- lm(Overall ~ Ast + TKCWON + Blocks + League-1, data = defendars)
+summary(m2)
+```
+
+
+# fixed effect for League with SM
+
+```{r}
+m2 <- lm(Overall ~ Ast + TKCWON + Blocks + SM + League-1, data = defendars)
+summary(m2)
+```
+
+
+```{r}
+fe_coefs4 <- summary(m2)$coefficients
+fe_coefs4 <- as.data.frame(fe_coefs4)
+fe_coefs4[order(fe_coefs4$Estimate, decreasing = TRUE),]
+```
+
+
+
+
+# Fixed Effects for League and Club w/o SM
+
+```{r}
+m3_1 <- lm(Overall ~ TKCWON + Blocks + Ast + League-1 + Squad-1, data = defendars)
+summary(m3_1)
+```
+
+
+
+# Fixed Effects for League and Club with SM
+
+```{r}
+m3 <- lm(Overall ~ Ast + TKCWON + Blocks + SM + League-1 + Squad-1, data = defendars)
+summary(m3)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r}
+fe_coefs4 <- summary(m3)$coefficients
+fe_coefs4 <- as.data.frame(fe_coefs4)
+fe_coefs4[order(fe_coefs4$Estimate, decreasing = TRUE),]
+```
+
+
+
+
+# Roberston is highest rated when Asissts is in model
+
+```{r}
+max(m3$fitted.values)
+m3$fitted.values
+```
+
+
+
+
+
+#Model using tackle instead of tackle percentage won!
+
+```{r}
+m3_2 <- lm(Overall ~ Tkl + Blocks + SM + Ast + League-1 + Squad-1, data = defendars)
+summary(m3_2)
+```
+
+
+#Model using tackle instead of tackle percentage won and no SM!
+
+```{r}
+m3_3 <- lm(Overall ~ Tkl + Blocks + Ast + League-1 + Squad-1, data = defendars)
+summary(m3_3)
+```
+
+
+#Histogram to show rating distr
+
+
+```{r}
+#model with tackle + no SM
+hist(predict(m3_3), main="Rating Distribution", xlab="Rating")
+
+#model with tackle perc + SM
+hist(predict(m3), main = "Rating Distribution", xlab = "Rating")
+```
+
+
+
+
+# Histograms (Comparing model using Tackle vs Tackle Percentage Won)
+
+```{r}
+hist(m3_3$residuals, main="No Starts Perc", xlab="Residual")
+
+#model with tackle perc + SM
+hist(m3$residuals, main = "StartsPerc", xlab = "Residual")
+```
+
+
+
+
+
+
+
+
+
+
+```{r}
+#Model with tackles
+plot(m3_3$residuals ~ m3_3$fitted.values, xlab = "Predicted Ratings", ylab = "Residual", data = defendars)
+abline(h = 0)
+
+#model with tackle perc + SM
+plot(m3$residuals ~ m3$fitted.values, xlab = "Predicted Ratings", ylab = "Residual", data = defendars)
+abline(h = 0)
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# World Cup 
+
+```{r}
+C45 <- read_excel("data.xlsx")
+```
+
+
+```{r}
+model4 <- lm( Rating ~  Gls...11 + Ast...12 + Min + factor(Squad)-1, data = C45)
+summary(model4)
+```
+
+
+
+
+```{r}
+fe_coefs5 <- summary(model4)$coefficients
+fe_coefs5 <- as.data.frame(fe_coefs5)
+fe_coefs5[order(fe_coefs5$Estimate, decreasing = TRUE),]
+```
+
+
+```{r}
+model4$fit
+```
+
+# Ronaldo is rated 88 and Messi is 91!
